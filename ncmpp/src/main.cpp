@@ -1,109 +1,33 @@
-#include "ncmlib/ncmdump.h"
-#include <filesystem>
-#include <iostream>
-#include <string>
-#include <vector>
-#include <chrono>
 
 #include "cmdline.h"
-#include "pool.h"
+#include "app_config.h"
+#include "app_logic.h"
+#include <thread>
 
-using namespace std;
-
-std::mutex logMtx;
-template <typename... Args> void log(Args &&...args) {
-    std::lock_guard<std::mutex> _a(logMtx);
-    ((std::cout << args), ...);
-    std::cout << endl;
-}
-
-std::unordered_set<std::string> unlocked_files;
-int totalPieces = 0;
-
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     cmdline::parser cmd;
     cmd.set_program_name("ncmpp");
-    cmd.add<unsigned int>("threads", 't',
-        "Max count of unlock threads.",
-        false, std::thread::hardware_concurrency()
-    );
-    cmd.add("showtime", 's',
-        "Shows how long it took to unlock everything."
-    );
+    cmd.add<unsigned int>("threads", 't', "Max count of unlock threads.", false, std::thread::hardware_concurrency());
+    cmd.add("showtime", 's', "Shows how long it took to unlock everything.");
+    cmd.add<std::string>("input", 'i', "Path to a text file containing a list of input .ncm files.", false, "");
+    cmd.add<std::string>("output", 'o', "Path to a text file containing a list of output files or a directory for fallback mode.", false, "unlocked");
+    cmd.add("help", 'h', "Print this message.");
 
-    bool success = cmd.parse(argc, argv);
-    if (!success)
-    {
-        log("\033[31m", cmd.error(), "\033[0m");
-        log(cmd.usage());
-        return 1;
+    cmd.parse_check(argc, argv);
+
+    app_config config;
+    config.thread_count = cmd.get<unsigned int>("threads");
+    config.show_time = cmd.exist("showtime");
+    config.input_file_list = cmd.get<std::string>("input");
+
+    // Determine if output is a file or directory
+    std::string output_path_str = cmd.get<std::string>("output");
+    if (!config.input_file_list.empty()) {
+        config.output_file_list = output_path_str;
+    } else {
+        config.output_dir = output_path_str;
     }
 
-    unsigned int c_thread = cmd.get<unsigned int>("threads");
-    bool s_time = cmd.exist("showtime");
-
-    log("Start with ", c_thread," threads.\n");
-
-    ::system("chcp>nul 2>nul 65001");
-
-    if (!filesystem::exists("unlock"))
-    {
-        filesystem::create_directory("unlock");
-    }
-    else
-    {
-        for (auto& i : filesystem::directory_iterator("./unlock"))
-        {
-            if (i.is_directory())
-            {
-                continue;
-            }
-            unlocked_files.emplace(i.path().stem().u8string());
-        }
-    }
-
-    auto start = std::chrono::steady_clock::now();
-
-    {
-        thread_pool pool(c_thread);
-        for (auto& i : filesystem::directory_iterator("."))
-        {
-            if (i.is_directory() ||
-                i.path().extension() != ".ncm"
-            )  {
-                continue;
-            }
-            pool.enqueue(
-                [](const filesystem::path& path)
-                {
-                    if (unlocked_files.find(path.stem().u8string()) ==
-                        unlocked_files.end()) {
-                        ncm::ncmDump(path.u8string(), "unlock");
-                        log("\033[36mUnlocked:\t", path.filename().u8string(), "\033[0m");
-                        ++totalPieces;
-                    }
-                    else
-                    {
-                        log("\033[33mSkipped:\t", path.filename().u8string(), "\033[0m");
-                    }
-                },
-                i.path());
-        }
-    }
-
-    auto end = std::chrono::steady_clock::now();
-    log("\n\033[32mFinished.\033[0m");
-    log("Unlocked ", totalPieces, " pieces of music.");
-
-    if (s_time)
-    {
-        log("Time elapsed: ",
-            std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-            .count() / 1000.0,
-            "s");
-    }
-
-    ::system("pause");
-    return 0;
+    ncm_app app(config);
+    return app.run();
 }

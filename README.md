@@ -1,34 +1,103 @@
+
 # ncmpp
 
-一个极速的多线程ncm解密器
+A fast, multi-threaded C++ tool for unlocking NCM audio files.
 
-建议使用带有图形界面的版本：[ncmppGui](https://github.com/Majjcom/ncmppGui)
+## Features
 
-## 使用方法
+*   **Cross-Platform:** Builds and runs on Linux and other systems with a C++20 compiler.
+*   **Multi-threaded:** Utilizes multiple threads to process files in parallel for maximum speed.
+*   **Flexible Input:**
+    *   Process individual `.ncm` files.
+    *   Scan a directory for all `.ncm` files.
+    *   Read a list of input files from a text file.
+*   **Flexible Output:**
+    *   Specify an output directory.
+    *   Provide a list of output file paths for 1-to-1 mapping.
 
-### 快速开始
+## Dependencies
 
-- 下载`Release`中最新版本的可执行文件
+*   **OpenSSL:** Required for the cryptographic operations.
+*   **RapidJSON:** Required for parsing metadata.
+*   **CMake:** Required for building the project.
 
-- 将文件复制到有`ncm`文件的目录中
+## Building
 
-- 双击运行程序
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/Majjcom/ncmpp.git
+    cd ncmpp
+    ```
 
-- 等待解密完成
-- 解密后的文件存放在`unlock`文件夹中
+2.  **Create a build directory:**
+    ```bash
+    mkdir build
+    cd build
+    ```
 
-### 命令行参数
+3.  **Configure the project with CMake:**
+    ```bash
+    cmake ..
+    ```
 
---threads[t] 最大线解密程数
+4.  **Build the project:**
+    ```bash
+    cmake --build .
+    ```
+    The executable `ncmpp` will be created in the `build` directory.
 
---showtime[s] 显示解密消耗的时间
+## Usage
 
-## 构建环境
+```
+usage: ./ncmpp [options] ... 
 
-Windows 10
+options:
+  -h, --help            Print this message.
+  -t, --threads <arg>   Max count of unlock threads. (unsigned int [=...])
+  -s, --showtime        Shows how long it took to unlock everything.
+  -i, --input <arg>     Path to a text file containing a list of input .ncm files. (string [=])
+  -o, --output <arg>    Path to a text file containing a list of output files or a directory for fallback mode. (string [=unlocked])
+```
 
-Visual Studio 2022
+### Examples
 
-SDK: 10.0.19041.0
+**1. Scan the current directory and unlock files to the `unlocked` directory:**
+```bash
+./ncmpp
+```
 
-openssl: 1.1.1s
+**2. Use 4 threads and show the time taken:**
+```bash
+./ncmpp -t 4 -s
+```
+
+**3. Process a list of input files and save to a specific directory:**
+*   `input.txt`:
+    ```
+    /path/to/song1.ncm
+    /path/to/song2.ncm
+    ```
+*   Command:
+    ```bash
+    ./ncmpp -i input.txt -o /path/to/unlocked_music
+    ```
+
+**4. Process a list of input files with a 1-to-1 output mapping:**
+*   `input.txt`:
+    ```
+    /path/to/song1.ncm
+    /path/to/song2.ncm
+    ```
+*   `output.txt`:
+    ```
+    /path/to/unlocked/song1.mp3
+    /path/to/unlocked/song2.flac
+    ```
+*   Command:
+    ```bash
+    ./ncmpp -i input.txt -o output.txt
+    ```
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
