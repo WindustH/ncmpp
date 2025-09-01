@@ -148,7 +148,8 @@ void NcmFile::_dump_audio_data(const filesystem::path& out_path) {
     _file.seekg(image_len, ios::cur);
 
     string extname = "." + string(_metadata["format"].GetString());
-    filesystem::path tgt = out_path / _path.stem().replace_extension(extname);
+    filesystem::path tgt = out_path;
+    tgt.replace_extension(extname);
 
     ofstream of(tgt, ios::out | ios::binary);
     if (!of.is_open()) {
