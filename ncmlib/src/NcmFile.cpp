@@ -78,7 +78,12 @@ void NcmFile::_read_key_data() {
 
     unsigned char core_key[16];
     hex2str(CORE_HEX_KEY, core_key);
-    _key_data = aes_ecb_decrypt(key_data_bin.data(), key_len, core_key);
+    vector<unsigned char> decrypted_key = aes_ecb_decrypt(key_data_bin.data(), key_len, core_key);
+
+    // Unpad the decrypted key
+    unsigned int unpadded_len = pkcs7::pad_size(decrypted_key.data(), decrypted_key.size());
+    _key_data.resize(unpadded_len);
+    pkcs7::unpad(decrypted_key.data(), decrypted_key.size(), _key_data.data());
 }
 
 void NcmFile::_setup_key_box() {
@@ -145,11 +150,34 @@ void NcmFile::_dump_audio_data(const filesystem::path& out_path) {
     unsigned char image_len_bin[4];
     _file.read((char*)image_len_bin, 4);
     unsigned int image_len = little_int(image_len_bin);
-    _file.seekg(image_len, ios::cur);
+
+    if (image_len > 0) {
+        vector<unsigned char> image_data(image_len);
+        _file.read((char*)image_data.data(), image_len);
+
+        filesystem::path cover_path = out_path;
+        cover_path.replace_extension("jpg");
+
+        if (cover_path.has_parent_path()) {
+            filesystem::create_directories(cover_path.parent_path());
+        }
+
+        ofstream cover_of(cover_path, ios::out | ios::binary);
+        if (cover_of.is_open()) {
+            cover_of.write((char*)image_data.data(), image_len);
+            cover_of.close();
+        }
+    } else {
+        _file.seekg(image_len, ios::cur);
+    }
 
     string extname = "." + string(_metadata["format"].GetString());
     filesystem::path tgt = out_path;
     tgt.replace_extension(extname);
+
+    if (tgt.has_parent_path()) {
+        filesystem::create_directories(tgt.parent_path());
+    }
 
     ofstream of(tgt, ios::out | ios::binary);
     if (!of.is_open()) {
@@ -157,12 +185,15 @@ void NcmFile::_dump_audio_data(const filesystem::path& out_path) {
     }
 
     unsigned char buff[0x8000];
-    while (_file.read((char*)buff, sizeof(buff))) {
-        unsigned int buff_len = _file.gcount();
+    _file.read((char*)buff, sizeof(buff));
+    unsigned int buff_len = _file.gcount();
+    while (buff_len > 0) {
         for (unsigned int i = 0; i < buff_len; i++) {
             int j = (i + 1) & 0xff;
             buff[i] ^= _key_box[(_key_box[j] + _key_box[(_key_box[j] + j) & 0xff]) & 0xff];
         }
         of.write((char*)buff, buff_len);
+        _file.read((char*)buff, sizeof(buff));
+        buff_len = _file.gcount();
     }
 }

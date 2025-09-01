@@ -17,7 +17,7 @@ def generate_ncm_lists(music_dir):
     ncm_files = list(music_path.rglob('*.ncm'))
 
     if not ncm_files:
-        print("No .ncm files found.")
+        print(f"No .ncm files found in '{music_path.resolve()}'.")
         return
 
     output_dir = Path.cwd()
@@ -30,16 +30,15 @@ def generate_ncm_lists(music_dir):
             f_in.write(str(ncm_file.resolve()) + '\n')
 
             # Write the desired output path (without extension) to the current directory
-            output_name = ncm_file.stem
-            f_out.write(str(output_dir / output_name) + '\n')
+            f_out.write(str(ncm_file.parent / ncm_file.stem) + '\n')
 
     print(f"Successfully generated '{input_list_path.name}' and '{output_list_path.name}' in '{output_dir}'")
     print(f"Found {len(ncm_files)} .ncm files.")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python find_ncm.py <directory_with_ncm_files>")
+    if len(sys.argv) > 2:
+        print("Usage: python find_ncm.py [directory]")
         sys.exit(1)
 
-    target_directory = sys.argv[1]
+    target_directory = sys.argv[1] if len(sys.argv) == 2 else "."
     generate_ncm_lists(target_directory)
