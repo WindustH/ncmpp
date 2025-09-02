@@ -109,7 +109,7 @@ void ncm_app::run_fallback_mode() {
 
     thread_pool pool(config_.thread_count);
     for (const auto& file_path : files_to_process) {
-        filesystem::path output_path = config_.output_dir / file_path.filename().replace_extension();
+        filesystem::path output_path = config_.output_dir / file_path.stem();
         pool.enqueue(std::bind(&ncm_app::process_file, this, file_path, output_path));
     }
 }

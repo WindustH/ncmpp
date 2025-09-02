@@ -173,7 +173,10 @@ void NcmFile::_dump_audio_data(const filesystem::path& out_path) {
 
     string extname = "." + string(_metadata["format"].GetString());
     filesystem::path tgt = out_path;
-    tgt.replace_extension(extname);
+    
+    // Add extension directly instead of using replace_extension
+    // This preserves the full filename including dots
+    tgt += extname;
 
     if (tgt.has_parent_path()) {
         filesystem::create_directories(tgt.parent_path());

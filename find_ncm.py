@@ -29,8 +29,10 @@ def generate_ncm_lists(music_dir):
             # Write the full path to the input file
             f_in.write(str(ncm_file.resolve()) + '\n')
 
-            # Write the desired output path (without extension) to the current directory
-            f_out.write(str(ncm_file.parent / ncm_file.stem) + '\n')
+            # Write the desired output path (without .ncm extension) to the current directory
+            # Use stem to preserve full filename including dots
+            base_name = ncm_file.stem
+            f_out.write(str(ncm_file.parent / base_name) + '\n')
 
     print(f"Successfully generated '{input_list_path.name}' and '{output_list_path.name}' in '{output_dir}'")
     print(f"Found {len(ncm_files)} .ncm files.")
