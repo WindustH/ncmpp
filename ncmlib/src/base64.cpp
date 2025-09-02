@@ -31,10 +31,18 @@
 
 */
 
-#include "base64.h"
+/**
+ * @file base64.cpp
+ * @brief Base64 encoding and decoding implementation
+ * @details Provides base64 encoding and decoding functionality for NCM file processing
+ * @author René Nyffenegger (original implementation)
+ * @note This is a compact and efficient base64 implementation
+ */ 
 
+#include "base64.h"
 #include <algorithm>
 #include <stdexcept>
+#include <iostream>
 
  //
  // Depending on the url parameter in base64_chars, one of

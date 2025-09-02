@@ -18,6 +18,25 @@ from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC
 import mimetypes
 
+# Import color logging
+sys.path.append(str(Path(__file__).parent))
+try:
+    from color_log import ColorLogger
+    log = ColorLogger.log
+    info = ColorLogger.info
+    warn = ColorLogger.warn
+    error = ColorLogger.error
+    success = ColorLogger.success
+    path = ColorLogger.path
+except ImportError:
+    # Fallback without colors
+    def log(msg, level="INFO"): print(f"[{level}] {msg}")
+    info = lambda msg: log(msg, "INFO")
+    warn = lambda msg: log(msg, "WARN")
+    error = lambda msg: log(msg, "ERROR")
+    success = lambda msg: log(msg, "SUCCESS")
+    path = lambda p: str(p)
+
 
 def embed_cover_into_music(music_file_path, cover_file_path):
     """Embed cover image into music file."""
@@ -29,11 +48,11 @@ def embed_cover_into_music(music_file_path, cover_file_path):
         elif file_ext == '.mp3':
             return embed_cover_into_mp3(music_file_path, cover_file_path)
         else:
-            print(f"Unsupported file format: {file_ext}")
+            warn(f"Unsupported file format: {file_ext}")
             return False
 
     except Exception as e:
-        print(f"Error embedding cover into {music_file_path}: {e}")
+        error(f"Error embedding cover into {path(music_file_path)}: {e}")
         return False
 
 
@@ -60,11 +79,11 @@ def embed_cover_into_flac(music_file_path, cover_file_path):
         audio.add_picture(picture)
         audio.save()
 
-        print(f"Successfully embedded cover into FLAC: {music_file_path.name}")
+        success(f"Successfully embedded cover into FLAC: {path(music_file_path.name)}")
         return True
 
     except Exception as e:
-        print(f"Error embedding cover into FLAC: {e}")
+        error(f"Error embedding cover into FLAC: {e}")
         return False
 
 
@@ -95,11 +114,11 @@ def embed_cover_into_mp3(music_file_path, cover_file_path):
         )
         audio.save()
 
-        print(f"Successfully embedded cover into MP3: {music_file_path.name}")
+        success(f"Successfully embedded cover into MP3: {path(music_file_path.name)}")
         return True
 
     except Exception as e:
-        print(f"Error embedding cover into MP3: {e}")
+        error(f"Error embedding cover into MP3: {e}")
         return False
 
 
@@ -107,26 +126,26 @@ def process_file(base_path):
     """Process a single base path (without extension)."""
     base_path = Path(base_path.strip())
 
-    # Look for cover image (.jpg)
-    cover_file = base_path.with_suffix('.jpg')
+    # Look for cover image (.jpg) - handle filenames with dots correctly
+    cover_file = base_path.parent / (base_path.name + '.jpg')
     if not cover_file.exists():
-        print(f"Cover image not found: {cover_file}")
+        warn(f"Cover image not found: {path(cover_file)}")
         return False
 
-    # Look for music files (.flac or .mp3)
+    # Look for music files (.flac or .mp3) - handle filenames with dots correctly
     music_files = []
     for ext in ['.flac', '.mp3']:
-        music_file = base_path.with_suffix(ext)
+        music_file = base_path.parent / (base_path.name + ext)
         if music_file.exists():
             music_files.append(music_file)
 
     if not music_files:
-        print(f"No music files found for: {base_path}")
+        warn(f"No music files found for: {path(base_path)}")
         return False
 
     success_count = 0
     for music_file in music_files:
-        print(f"Processing: {music_file.name}")
+        info(f"Processing: {path(music_file.name)}")
 
         if embed_cover_into_music(music_file, cover_file):
             success_count += 1
@@ -135,9 +154,9 @@ def process_file(base_path):
     if success_count > 0:
         try:
             cover_file.unlink()
-            print(f"Deleted cover image: {cover_file.name}")
+            info(f"Deleted cover image: {path(cover_file.name)}")
         except Exception as e:
-            print(f"Warning: Could not delete cover image: {e}")
+            warn(f"Could not delete cover image: {e}")
 
     return success_count > 0
 
@@ -145,16 +164,16 @@ def process_file(base_path):
 def main():
     """Main function."""
     if len(sys.argv) != 2:
-        print("Usage: python embed_cover.py filepath_with_no_ext_to_deal.txt")
+        error("Usage: python embed_cover.py filepath_with_no_ext_to_deal.txt")
         sys.exit(1)
 
     input_file = Path(sys.argv[1])
 
     if not input_file.exists():
-        print(f"Error: Input file not found: {input_file}")
+        error(f"Input file not found: {path(input_file)}")
         sys.exit(1)
 
-    print(f"Processing file: {input_file}")
+    info(f"Processing file: {path(input_file)}")
 
     success_count = 0
     failure_count = 0
@@ -165,16 +184,16 @@ def main():
             if not line:  # Skip empty lines
                 continue
 
-            print(f"\nProcessing line {line_num}: {line}")
+            info(f"Processing line {line_num}: {path(line)}")
 
             if process_file(line):
                 success_count += 1
             else:
                 failure_count += 1
 
-    print(f"\nProcessing complete!")
-    print(f"Successfully processed: {success_count} files")
-    print(f"Failed to process: {failure_count} files")
+    success("Processing complete!")
+    success(f"Successfully processed: {success_count} files")
+    warn(f"Failed to process: {failure_count} files")
 
 
 if __name__ == "__main__":
