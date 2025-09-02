@@ -9,20 +9,39 @@ from pathlib import Path
 
 # Import color logging
 sys.path.append(str(Path(__file__).parent))
+from typing import Any
+ColorLogger: Any = None
 try:
-    from color_log import ColorLogger
+    # Prefer importing the real ColorLogger when available
+    from color_log import ColorLogger as _ColorLogger
+    ColorLogger = _ColorLogger
     log = ColorLogger.log
     info = ColorLogger.info
     warn = ColorLogger.warn
     error = ColorLogger.error
     success = ColorLogger.success
 except ImportError:
-    # Fallback without colors
-    def log(msg, level="INFO"): print(f"[{level}] {msg}")
-    info = lambda msg: log(msg, "INFO")
-    warn = lambda msg: log(msg, "WARN")
-    error = lambda msg: log(msg, "ERROR")
-    success = lambda msg: log(msg, "SUCCESS")
+    # Fallback without colors: provide minimal functions and a simple namespace
+    from types import SimpleNamespace
+
+    def _log(msg, level="INFO"):
+        print(f"[{level}] {msg}")
+
+    ColorLogger = SimpleNamespace(
+        log=_log,
+        info=lambda msg: _log(msg, "INFO"),
+        warn=lambda msg: _log(msg, "WARN"),
+        error=lambda msg: _log(msg, "ERROR"),
+        success=lambda msg: _log(msg, "SUCCESS"),
+        path=lambda p: str(p)
+    )
+
+    # Aliases for compatibility
+    log = ColorLogger.log
+    info = ColorLogger.info
+    warn = ColorLogger.warn
+    error = ColorLogger.error
+    success = ColorLogger.success
 
 def generate_ncm_lists(music_dir):
     """

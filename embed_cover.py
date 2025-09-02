@@ -12,10 +12,12 @@ and then deletes the cover image.
 import sys
 import os
 from pathlib import Path
+from typing import cast
 import mutagen
 from mutagen.flac import FLAC, Picture
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, APIC
+from mutagen.id3 import ID3
+from mutagen.id3._frames import APIC
 import mimetypes
 
 # Import color logging
@@ -99,11 +101,21 @@ def embed_cover_into_mp3(music_file_path, cover_file_path):
         # Determine MIME type
         mime_type = mimetypes.guess_type(str(cover_file_path))[0] or 'image/jpeg'
 
+        # Ensure ID3 tags exist and get a typed reference
+        tags = audio.tags
+        if tags is None:
+            try:
+                audio.add_tags()
+            except Exception:
+                audio.tags = ID3()
+            tags = audio.tags
+        tags = cast(ID3, tags)
+
         # Remove existing APIC frames
-        audio.tags.delall('APIC')
+        tags.delall('APIC')
 
         # Add the new cover
-        audio.tags.add(
+        tags.add(
             APIC(
                 encoding=3,  # UTF-8
                 mime=mime_type,
